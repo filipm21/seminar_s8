@@ -158,6 +158,10 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
       node.node_handle()->advertise<rosgraph_msgs::Clock>(
           kClockTopic, kLatestOnlyPublisherQueueSize);
 
+  ::ros::Publisher pointcloud_publisher =
+      node.node_handle()->advertise<sensor_msgs::PointCloud2>(
+          "our_point_cloud", 1);
+
   if (urdf_transforms.size() > 0) {
     static_tf_broadcaster.sendTransform(urdf_transforms);
   }
@@ -351,6 +355,41 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
       node.FinishTrajectory(trajectory_id);
     }
   }
+
+  cartographer_ros_msgs::SubmapCloudQuery::Request request;
+  cartographer_ros_msgs::SubmapCloudQuery::Response response;
+  std::vector<sensor_msgs::PointCloud2> point_clouds;
+  
+  request.trajectory_id = 0;
+  request.submap_index = 0;
+  request.min_probability = 0.7; //need to look into that
+  request.high_resolution = true;
+  bool condition = true;
+
+  while(condition){
+    condition = node.HandleSubmapCloudQuery(request,response);
+    if(condition){
+      point_clouds.push_back(response.cloud);
+      LOG(INFO) << request.submap_index;
+      pointcloud_publisher.publish(response.cloud);
+    }
+    request.submap_index++;
+  }
+
+  LOG(INFO) << "Size of point cloud vector: '" << point_clouds.size() << "'...";
+  
+/*
+  for(std::vector<sensor_msgs::PointCloud2>::iterator it = point_clouds.begin(); it != point_clouds.end(); ++it) {
+    pointcloud_publisher.publish(*it);
+    //::ros::Duration(2).sleep();
+    LOG(INFO) << "publisham point cloud";
+    
+    }*/
+  
+
+
+  
+
 
   // Ensure the clock is republished after the bag has been finished, during the
   // final optimization, serialization, and optional indefinite spinning at the

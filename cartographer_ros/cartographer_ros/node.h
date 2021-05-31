@@ -88,6 +88,10 @@ class Node {
   ComputeDefaultSensorIdsForMultipleBags(
       const std::vector<TrajectoryOptions>& bags_options) const;
 
+  bool HandleSubmapCloudQuery(
+      cartographer_ros_msgs::SubmapCloudQuery::Request& request,
+      cartographer_ros_msgs::SubmapCloudQuery::Response& response);  
+
   // Adds a trajectory for offline processing, i.e. not listening to topics.
   int AddOfflineTrajectory(
       const std::set<
@@ -161,9 +165,7 @@ class Node {
   // 'SensorId::id' is the expected ROS topic name.
   std::set<::cartographer::mapping::TrajectoryBuilderInterface::SensorId>
   ComputeExpectedSensorIds(const TrajectoryOptions& options) const;
-  bool HandleSubmapCloudQuery(
-      cartographer_ros_msgs::SubmapCloudQuery::Request& request,
-      cartographer_ros_msgs::SubmapCloudQuery::Response& response);
+  
 
   void PublishSubmapPointCloud(const ::ros::WallTimerEvent& timer_event);
   int AddTrajectory(const TrajectoryOptions& options);

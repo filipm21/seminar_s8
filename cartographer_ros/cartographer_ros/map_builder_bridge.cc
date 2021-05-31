@@ -296,9 +296,9 @@ bool MapBuilderBridge::HandleSubmapCloudQuery(
     const ::cartographer::mapping::PoseGraph::SubmapData& submapData
           = submapDataMap.at(submap_id);
     ::cartographer::mapping::proto::Submap protoSubmap;
-    ::cartographer::mapping::proto::Submap* protoSubmapPtr = &protoSubmap;
+    //::cartographer::mapping::proto::Submap* protoSubmapPtr = &protoSubmap;
 
-    submapData.submap->ToProto(protoSubmapPtr);
+    protoSubmap = submapData.submap->ToProto(true);
     const cartographer::mapping::proto::Submap3D& submap3d = protoSubmap.submap_3d();
     const auto& hybrid_grid = request.high_resolution ?
                   submap3d.high_resolution_hybrid_grid() : submap3d.low_resolution_hybrid_grid();
@@ -324,7 +324,7 @@ bool MapBuilderBridge::HandleSubmapCloudQuery(
 
 
 bool MapBuilderBridge::CreateLastSubmapPointCloud(sensor_msgs::PointCloud2& cloud) {
-  const double min_probability = 0.7;
+  const double min_probability = 0.95;
   const int trajectory_id = 0;
   bool high_resolution = false;
   cartographer::mapping::SubmapId submap_id{0, 0};
