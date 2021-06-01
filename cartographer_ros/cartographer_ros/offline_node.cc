@@ -35,6 +35,13 @@
 #include "tf2_ros/static_transform_broadcaster.h"
 #include "urdf/model.h"
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+
 DEFINE_bool(collect_metrics, false,
             "Activates the collection of runtime metrics. If activated, the "
             "metrics can be accessed via a ROS service.");
@@ -356,13 +363,13 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
     }
   }
 
-  cartographer_ros_msgs::SubmapCloudQuery::Request request;
+  cartographer_ros_msgs::SubmapCloudQuery::Request request;  //Response and request for cloud query
   cartographer_ros_msgs::SubmapCloudQuery::Response response;
-  std::vector<sensor_msgs::PointCloud2> point_clouds;
+  std::vector<sensor_msgs::PointCloud2> point_clouds; //Vector to save submap pointclouds
   
   request.trajectory_id = 0;
   request.submap_index = 0;
-  request.min_probability = 0.7; //need to look into that
+  request.min_probability = 0.9; //need to look into that
   request.high_resolution = true;
   bool condition = true;
 
@@ -370,25 +377,43 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
     condition = node.HandleSubmapCloudQuery(request,response);
     if(condition){
       point_clouds.push_back(response.cloud);
-      LOG(INFO) << request.submap_index;
-      pointcloud_publisher.publish(response.cloud);
     }
     request.submap_index++;
   }
 
+  pcl::PointCloud<pcl::PointXYZRGBNormal> MergedCloud;
+  pcl::PointCloud<pcl::PointXYZRGBNormal> tempCloud;
+  
+
+
   LOG(INFO) << "Size of point cloud vector: '" << point_clouds.size() << "'...";
-  
-/*
+  auto flag = true;
   for(std::vector<sensor_msgs::PointCloud2>::iterator it = point_clouds.begin(); it != point_clouds.end(); ++it) {
-    pointcloud_publisher.publish(*it);
-    //::ros::Duration(2).sleep();
-    LOG(INFO) << "publisham point cloud";
-    
-    }*/
-  
+    pcl::fromROSMsg(*it, tempCloud); //Transform from rosmsg to pcl
+    // Merge metadata
+    if(flag){
+      MergedCloud = tempCloud;
+      flag = false;
+    }
+    else {
+      MergedCloud += tempCloud;
+    }
+  }
 
 
+
+  pcl::PLYWriter writer; //Write point cloud to PLY
+  bool binary = false;
+  bool use_camera = false;
+  if (writer.write("/home/filip/Downloads/seminar_ply_09.ply", MergedCloud, binary, use_camera) != 0) {
+    ROS_ERROR("Something went wrong when trying to write the point cloud file.");
+    return;
+  }
   
+  /*
+  sensor_msgs::PointCloud2 finalCloud;
+  pcl::toROSMsg(MergedCloud, finalCloud);
+  pointcloud_publisher.publish(finalCloud);*/
 
 
   // Ensure the clock is republished after the bag has been finished, during the
